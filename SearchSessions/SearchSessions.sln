@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2046
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SearchSessions", "SearchSessions\SearchSessions.csproj", "{8911729C-9085-4EFC-8046-414BD9714045}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8911729C-9085-4EFC-8046-414BD9714045}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8911729C-9085-4EFC-8046-414BD9714045}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8911729C-9085-4EFC-8046-414BD9714045}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8911729C-9085-4EFC-8046-414BD9714045}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2BB45B53-C7B7-48CC-8E52-A2E175942022}
+	EndGlobalSection
+EndGlobal
