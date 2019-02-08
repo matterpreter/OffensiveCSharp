@@ -1,36 +1,74 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
-namespace SearchSessions
+public class SessionSearcher
 {
-    class Program
+    static void Main()
     {
-        static void Scan(string path)
+        string[] drives = Environment.GetLogicalDrives();
+
+        foreach (string drive in drives)
         {
-            try
+            DriveInfo di = new DriveInfo(drive);
+
+            if (!di.IsReady)
             {
-                foreach (var file in Directory.EnumerateFiles(path, "*.exe"))
-                {
-                    Console.WriteLine("FILE: " + file);
-                }
-                foreach (var dir in Directory.EnumerateDirectories(path))
-                {
-                    Console.WriteLine("DIRECTORY: " + dir);
-                    Scan(dir);
-                }
+                Console.WriteLine("The drive {0} could not be read", di.Name);
+                continue;
             }
-            catch (UnauthorizedAccessException)
-            {
-                Console.WriteLine("Error: " + path);
-            }
+            DirectoryInfo rootDir = di.RootDirectory;
+            RecursiveFileSearch(rootDir);
         }
 
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Searching for .TXT files...");
-            Scan("C:\\");
-            Console.ReadKey();
+        Console.WriteLine("Press any key");
+        Console.ReadKey();
+    }
 
+    static void RecursiveFileSearch(DirectoryInfo root)
+    {
+        FileInfo[] files = null;
+        DirectoryInfo[] subDirs = null;
+        var txtList = new List<string>();
+        var rdpList = new List<string>();
+        var sdtidList = new List<string>();
+
+        try
+        {
+            files = root.GetFiles("*.*");
+        }
+
+        catch (UnauthorizedAccessException){ }
+        catch (DirectoryNotFoundException){ }
+
+        if (files != null)
+        {
+            foreach (FileInfo fi in files)
+            {
+                if (fi.Extension.Equals(".ppk"))
+                {
+                    txtList.Add(fi.FullName);
+                    Console.WriteLine(fi.FullName);
+                }
+                if (fi.Extension.Equals(".rdp"))
+                {
+                    rdpList.Add(fi.FullName);
+                    Console.WriteLine(fi.FullName);
+                }
+                if (fi.Extension.Equals(".sdtid"))
+                {
+                    sdtidList.Add(fi.FullName);
+                    Console.WriteLine(fi.FullName);
+                }
+            }
+
+            subDirs = root.GetDirectories();
+
+            foreach (DirectoryInfo dirInfo in subDirs)
+            {
+                // Resursive call for each subdirectory.
+                RecursiveFileSearch(dirInfo);
+            }
         }
     }
 }
