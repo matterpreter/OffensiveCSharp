@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 public class SessionSearcher
 {
@@ -29,7 +31,7 @@ public class SessionSearcher
     {
         FileInfo[] files = null;
         DirectoryInfo[] subDirs = null;
-        var txtList = new List<string>();
+        var ppkList = new List<string>();
         var rdpList = new List<string>();
         var sdtidList = new List<string>();
 
@@ -47,7 +49,7 @@ public class SessionSearcher
             {
                 if (fi.Extension.Equals(".ppk"))
                 {
-                    txtList.Add(fi.FullName);
+                    ppkList.Add(fi.FullName);
                     Console.WriteLine(fi.FullName);
                 }
                 if (fi.Extension.Equals(".rdp"))
@@ -70,5 +72,33 @@ public class SessionSearcher
                 RecursiveFileSearch(dirInfo);
             }
         }
+    }
+    static void PPKParser(string path)
+    {
+        //string path = @"C:\temp\test.ppk";
+        List<string> lines = File.ReadAllLines(path).ToList();
+
+        List<string> protocol = lines[0].Split(':').ToList();
+        List<string> encryption = lines[1].Split(':').ToList();
+        List<string> comment = lines[2].Split(':').ToList();
+        List<string> mac = lines[lines.Count - 1].Split(':').ToList();
+
+        int privateKeyLenIndex = lines.FindIndex(s => new Regex(@"Private-Lines").Match(s).Success);
+        List<string> indexofPrivateKeyLen = lines[privateKeyLenIndex].Split(':').ToList();
+        int privateKeylen = Convert.ToInt32(indexofPrivateKeyLen[1].Replace(" ", String.Empty));
+        int endofPrivateKey = privateKeylen + privateKeyLenIndex;
+        string privateKey = null;
+        for (int i = privateKeyLenIndex + 1; i <= endofPrivateKey; i++)
+        {
+            privateKey += lines[i];
+        }
+
+        Console.WriteLine("Filename:\t " + path);
+        Console.WriteLine("Protocol:\t" + protocol[1]);
+        Console.WriteLine("Comment:\t" + comment[1]);
+        Console.WriteLine("Encryption:\t" + encryption[1]);
+        Console.WriteLine("Private Key:\t " + privateKey);
+        Console.WriteLine("Private Mac:\t" + mac[1]);
+        //Console.ReadLine();
     }
 }
