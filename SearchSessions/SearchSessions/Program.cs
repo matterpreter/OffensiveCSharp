@@ -101,4 +101,37 @@ public class SessionSearcher
         Console.WriteLine("Private Mac:\t" + mac[1]);
         //Console.ReadLine();
     }
+
+    static void RDPParser(string path)
+    {
+        //string path = @"C:\temp\test.rdp";
+        List<string> rdpFile = File.ReadAllLines(path).ToList();
+
+        int rdpAddressIDX = rdpFile.FindIndex(s => new Regex(@"full address").Match(s).Success);
+        int rdpGatewayIDX = rdpFile.FindIndex(s => new Regex(@"gatewayhostname").Match(s).Success);
+        //int rdpUsernameIDX = rdpFile.FindIndex(s => new Regex(@"username").Match(s).Success);
+        //int rdpIsAdminIDX = rdpFile.FindIndex(s => new Regex(@"administrative session").Match(s).Success);
+        int rdpPromptForCredsIDX = rdpFile.FindIndex(s => new Regex(@"prompt for credentials").Match(s).Success);
+
+        List<string> rdpAddress = rdpFile[rdpAddressIDX].Split(':').ToList();
+        List<string> rdpGateway = rdpFile[rdpGatewayIDX].Split(':').ToList();
+        //List<string> rdpUsername = rdpFile[rdpUsernameIDX].Split(':').ToList(); //This will error out if there is no specified username
+        //List<string> rdpIsAdmin = rdpFile[rdpIsAdminIDX].Split(':').ToList(); //This key isn't present in my test files
+        List<string> rdpPromptForCredsArr = rdpFile[rdpPromptForCredsIDX].Split(':').ToList();
+
+        Console.WriteLine("Filename:\t\t" + path);
+        Console.WriteLine("Address:\t\t" + rdpAddress[2]);
+        //Console.WriteLine("Username:\t\t" + rdpUsername[2]);
+        Console.WriteLine("Gateway Address:\t" + rdpGateway[2]);
+        //Console.WriteLine("Session in Admin:\t" + rdpIsAdmin[1]);
+        if (rdpPromptForCredsArr[2].ToString().Equals("0"))
+        {
+            Console.WriteLine("Prompts for Creds:\tFalse");
+        }
+        else
+        {
+            Console.WriteLine("Prompts for Creds:\tTrue");
+        }
+        Console.ReadLine();
+    }
 }
