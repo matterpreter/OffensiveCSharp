@@ -17,7 +17,7 @@ public class SessionSearcher
 
             if (!di.IsReady)
             {
-                Console.WriteLine("The drive {0} could not be read", di.Name);
+                Console.WriteLine("Drive {0} could not be read", di.Name);
                 continue;
             }
             DirectoryInfo rootDir = di.RootDirectory;
