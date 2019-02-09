@@ -8,6 +8,7 @@ public class SessionSearcher
 {
     static void Main()
     {
+        Console.WriteLine("[+] Searching all connected drives. This could take a few minutes...");
         string[] drives = Environment.GetLogicalDrives();
 
         foreach (string drive in drives)
@@ -22,18 +23,39 @@ public class SessionSearcher
             DirectoryInfo rootDir = di.RootDirectory;
             RecursiveFileSearch(rootDir);
         }
+        Console.WriteLine("[+] Parsing PPK files\r\n");
+        foreach (string ppkFile in ppkList)
+        {
+            PPKParser(ppkFile);
+        }
 
-        Console.WriteLine("Press any key");
-        Console.ReadKey();
+        Console.WriteLine("[+] Parsing RDP files\r\n");
+        foreach (string rdpFile in rdpList)
+        {
+            RDPParser(rdpFile);
+        }
+
+        Console.WriteLine("[+] Collected RSA tokens:\r\n");
+        foreach (string sdtidFile in sdtidList)
+        {
+            Console.WriteLine(sdtidFile);
+        }
+
+        //Console.WriteLine("Press any key");
+        //Console.ReadKey();
     }
+
+    static List<string> ppkList = new List<string>();
+    static List<string> rdpList = new List<string>();
+    static List<string> sdtidList = new List<string>();
 
     static void RecursiveFileSearch(DirectoryInfo root)
     {
         FileInfo[] files = null;
         DirectoryInfo[] subDirs = null;
-        var ppkList = new List<string>();
-        var rdpList = new List<string>();
-        var sdtidList = new List<string>();
+        //List<string> ppkList = new List<string>();
+        //List<string> rdpList = new List<string>();
+        //List<string> sdtidList = new List<string>();
 
         try
         {
@@ -99,7 +121,7 @@ public class SessionSearcher
         Console.WriteLine("Encryption:\t" + encryption[1]);
         Console.WriteLine("Private Key:\t " + privateKey);
         Console.WriteLine("Private Mac:\t" + mac[1]);
-        //Console.ReadLine();
+        Console.WriteLine();
     }
 
     static void RDPParser(string path)
@@ -132,6 +154,6 @@ public class SessionSearcher
         {
             Console.WriteLine("Prompts for Creds:\tTrue");
         }
-        Console.ReadLine();
+        Console.WriteLine();
     }
 }
