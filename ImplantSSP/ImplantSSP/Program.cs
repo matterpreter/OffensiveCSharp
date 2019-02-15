@@ -121,7 +121,6 @@ namespace ImplantSSP
             {
                 Console.WriteLine("[-] Unable to set registry key.");
             }
-            Console.ReadLine();
         }
     }
 }
