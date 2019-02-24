@@ -15,14 +15,12 @@ namespace GPSCoordinates
             if (key.GetValue("Value").Equals("Deny"))
             {
                 Console.WriteLine("[-] Location Services registry key set to 'Deny'");
-                //Environment.Exit(1);
-                Console.WriteLine("Hit any key to exit");
-                Console.ReadKey();
+                Environment.Exit(1);
             }
             else
             {
                 currentLoc.GetLocationEvent();
-                Console.WriteLine("Hit any key to exit");
+                Console.WriteLine("Hit any key to exit"); //This will likely cause problems with execute-assembly
                 Console.ReadKey();
             }
         }

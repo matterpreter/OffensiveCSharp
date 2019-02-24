@@ -23,7 +23,6 @@ namespace ImplantSSP
             return machineType;
         }
 
-        
         //Only supporting x86 and x64
         public enum MachineType : ushort
         {

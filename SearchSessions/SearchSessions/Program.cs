@@ -40,9 +40,6 @@ public class SessionSearcher
         {
             Console.WriteLine(sdtidFile);
         }
-
-        //Console.WriteLine("Press any key");
-        //Console.ReadKey();
     }
 
     static List<string> ppkList = new List<string>();
@@ -53,9 +50,6 @@ public class SessionSearcher
     {
         FileInfo[] files = null;
         DirectoryInfo[] subDirs = null;
-        //List<string> ppkList = new List<string>();
-        //List<string> rdpList = new List<string>();
-        //List<string> sdtidList = new List<string>();
 
         try
         {
@@ -97,7 +91,6 @@ public class SessionSearcher
     }
     static void PPKParser(string path)
     {
-        //string path = @"C:\temp\test.ppk";
         List<string> lines = File.ReadAllLines(path).ToList();
 
         List<string> protocol = lines[0].Split(':').ToList();
@@ -126,7 +119,6 @@ public class SessionSearcher
 
     static void RDPParser(string path)
     {
-        //string path = @"C:\temp\test.rdp";
         List<string> rdpFile = File.ReadAllLines(path).ToList();
 
         int rdpAddressIDX = rdpFile.FindIndex(s => new Regex(@"full address").Match(s).Success);
