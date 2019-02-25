@@ -8,8 +8,16 @@ namespace GPSCoordinates
     {
         static void Main(string[] args)
         {
+            RegistryKey osVerKey = Registry.LocalMachine;
+            RegistryKey osVerSubKey = osVerKey.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\Windows NT\CurrentVersion");
+            string osVer = osVerSubKey.GetValue("ProductName").ToString();
+            if (!osVer.Contains("Windows 10"))
+            {
+                Console.WriteLine("[-] Target does not appear to be Windows 10. Exiting.");
+                Environment.Exit(1);
+            }
+
             Location currentLoc = new Location();        
-            //Implement OS version check?
 
             RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location");
             if (key.GetValue("Value").Equals("Deny"))

