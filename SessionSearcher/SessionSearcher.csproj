@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">anycpu</Platform>
-    <ProjectGuid>{9BFDA3F9-49F6-43C5-AFF6-784E0FE87570}</ProjectGuid>
+    <ProjectGuid>{75207B65-E791-41DA-8431-8E207D841F05}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>PhantomService</RootNamespace>
-    <AssemblyName>PhantomService</AssemblyName>
+    <RootNamespace>SessionSearcher</RootNamespace>
+    <AssemblyName>SessionSearcher</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -31,8 +31,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Configuration.Install" />
-    <Reference Include="System.ServiceProcess" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />

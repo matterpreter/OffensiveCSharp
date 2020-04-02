@@ -3,10 +3,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">anycpu</Platform>
-    <ProjectGuid>{9BFDA3F9-49F6-43C5-AFF6-784E0FE87570}</ProjectGuid>
+    <ProjectGuid>{7CA6C01A-7B54-42E9-B26A-7B78884F43D6}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>PhantomService</RootNamespace>
-    <AssemblyName>PhantomService</AssemblyName>
+    <RootNamespace>GPSCoordinates</RootNamespace>
+    <AssemblyName>GPSCoordinates</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -31,8 +31,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Configuration.Install" />
-    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Device" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
