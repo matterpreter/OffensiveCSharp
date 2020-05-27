@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionSearcher", "SessionS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnquotedPath", "UnquotedPath\UnquotedPath.csproj", "{795B47F7-40F4-48E5-9E6A-4268955A6D7B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InspectAssembly", "InspectAssembly\InspectAssembly.csproj", "{AD895307-A862-4569-9204-B01BBB7620DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|anycpu = Debug|anycpu
@@ -80,6 +82,10 @@ Global
 		{795B47F7-40F4-48E5-9E6A-4268955A6D7B}.Debug|anycpu.Build.0 = Debug|Any CPU
 		{795B47F7-40F4-48E5-9E6A-4268955A6D7B}.Release|anycpu.ActiveCfg = Release|Any CPU
 		{795B47F7-40F4-48E5-9E6A-4268955A6D7B}.Release|anycpu.Build.0 = Release|Any CPU
+		{AD895307-A862-4569-9204-B01BBB7620DB}.Debug|anycpu.ActiveCfg = Debug|Any CPU
+		{AD895307-A862-4569-9204-B01BBB7620DB}.Debug|anycpu.Build.0 = Debug|Any CPU
+		{AD895307-A862-4569-9204-B01BBB7620DB}.Release|anycpu.ActiveCfg = Release|Any CPU
+		{AD895307-A862-4569-9204-B01BBB7620DB}.Release|anycpu.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
