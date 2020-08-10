@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnquotedPath", "UnquotedPat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InspectAssembly", "InspectAssembly\InspectAssembly.csproj", "{AD895307-A862-4569-9204-B01BBB7620DB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HijackHunter", "HijackHunter\HijackHunter.csproj", "{F729228E-A0FA-463E-BD35-92C0B78435E9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|anycpu = Debug|anycpu
@@ -86,6 +88,10 @@ Global
 		{AD895307-A862-4569-9204-B01BBB7620DB}.Debug|anycpu.Build.0 = Debug|Any CPU
 		{AD895307-A862-4569-9204-B01BBB7620DB}.Release|anycpu.ActiveCfg = Release|Any CPU
 		{AD895307-A862-4569-9204-B01BBB7620DB}.Release|anycpu.Build.0 = Release|Any CPU
+		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Debug|anycpu.ActiveCfg = Debug|Any CPU
+		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Debug|anycpu.Build.0 = Debug|Any CPU
+		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Release|anycpu.ActiveCfg = Release|Any CPU
+		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Release|anycpu.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
