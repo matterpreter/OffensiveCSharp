@@ -115,7 +115,7 @@ namespace InspectAssembly
 
                     }
 
-                     if (instruction.OpCode.ToString().StartsWith("ldc.i4"))
+                    if (instruction.OpCode.ToString().StartsWith("ldc.i4"))
                     {
                         typeFilterLevel = instruction.OpCode.ToString();
                     }
@@ -132,6 +132,20 @@ namespace InspectAssembly
                         {
                             case string x when x.Contains("System.Runtime.Remoting.Channels.ChannelServices::RegisterChannel"):
                                 Console.WriteLine("[+] Assembly registers a .NET Remoting channel ({0}) in {1}.{2}", dnrChannel[5], method.t.Name, method.m.Name);
+                                break;
+                        }
+                    }
+                    
+                    // WCF checks
+                    if (instruction.OpCode.ToString() == "callvirt")
+                    {
+                        switch (instruction.Operand.ToString())
+                        {
+                            case string x when x.Contains("System.ServiceModel.ServiceHost::AddServiceEndpoint"):
+                                Console.WriteLine("[+] Assembly appears to be a WCF server");
+                                break;
+                            case string x when x.Contains("System.ServiceModel.ChannelFactory") && x.Contains("CreateChannel"): // System.ServiceModel.ChannelFactory`1<ClassName.ClassName>::CreateChannel()
+                                Console.WriteLine("[+] Assembly appears to be a WCF client");
                                 break;
                         }
                     }
