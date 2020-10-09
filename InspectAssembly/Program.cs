@@ -39,8 +39,8 @@ namespace InspectAssembly
             }
             if (result.ContainsKey("path"))
             {
-                if (!File.Exists((string)result["path"]))
-                    throw new Exception(String.Format("File {0} does not exist.", result["path"]));
+                if (!File.Exists((string)result["path"]) && !Directory.Exists((string)result["path"]))
+                    throw new Exception(String.Format("File or directory {0} does not exist.", result["path"]));
             } else
             {
                 string pids = (string)result["pid"];
@@ -85,12 +85,13 @@ namespace InspectAssembly
             return @"
 Example Usage:
     InspectAssembly.exe path=""C:\Windows\System32\powershell.exe""
+    InspectAssembly.exe path=""C:\Windows\System32\""    
     InspectAssembly.exe pid=12044
     InspectAssembly.exe pid=12044,12300 outfile=proc_analysis.txt
     InspectAssembly.exe pid=all
 
 Arguments:
-    path    - A path to a .NET binary to analyze.
+    path    - A path to a .NET binary to analyze, or a directory containing .NET assemblies.
     pid     - An integer or comma-separated list of integers to analyze.
               If the keyword 'all' is passed, then all processes are analyzed.
     outfile - File to write results to.
@@ -113,15 +114,24 @@ Arguments:
             List<AssemblyGadgetAnalysis> results = new List<AssemblyGadgetAnalysis>();
             if (arguments.ContainsKey("path"))
             {
-                try
+                string path = arguments["path"].ToString();
+                if (File.Exists(path))
                 {
-                    string targetAsm = arguments["path"].ToString();
-                    AssemblyName assemblyName = AssemblyName.GetAssemblyName(targetAsm);
-                    results.Add(InspectAssembly(targetAsm));
-                } catch (Exception ex)
+                    try
+                    {
+                        AssemblyName assemblyName = AssemblyName.GetAssemblyName(path);
+                        results.Add(InspectAssembly(path));
+                    } catch { }
+                } else
                 {
-                    Console.WriteLine("[-] Error: {0}", ex.Message);
-                    return;
+                    foreach(var f in Directory.GetFiles(path))
+                    {
+                        try
+                        {
+                            AssemblyName assemblyName = AssemblyName.GetAssemblyName(f);
+                            results.Add(InspectAssembly(f));
+                        } catch { continue; }
+                    }
                 }
             } else
             {
