@@ -265,7 +265,8 @@ Arguments:
                 GadgetCalls = new Dictionary<string, MethodInfo[]>();
                 foreach(var key in temp.Keys)
                 {
-                    GadgetCalls[key] = temp[key].ToArray();
+                    if (!string.IsNullOrEmpty(key))
+                        GadgetCalls[key] = temp[key].ToArray();
                 }
             }
 
@@ -319,7 +320,7 @@ Arguments:
 
             public override string ToString()
             {
-                return string.Format("{0} (Filter Level: {1})", MethodName, FilterLevel);
+                return !string.IsNullOrEmpty(FilterLevel) ? string.Format("{0} (Filter Level: {1}", MethodName, FilterLevel) : MethodName;
             }
         }
 
@@ -351,8 +352,9 @@ IsDotNetRemoting     : {0}
 IsWCFServer          : {2}
 IsWCFClient          : {3}
 GadgetName           : {4}
-MethodAppearance     : {5}
-    FilterLevel      : {6}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsWCFClient, gadget, MethodAppearance, FilterLevel);
+MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsWCFClient, gadget, MethodAppearance);
+                if (!string.IsNullOrEmpty(FilterLevel))
+                    fmtMessage += string.Format("\n\tFilterLevel      : {0}", FilterLevel);
                 return fmtMessage;
             }
         }
@@ -452,7 +454,7 @@ MethodAppearance     : {5}
                                 isWCFServer = true;
                                 break;
                             case string x when x.Contains("System.ServiceModel.ChannelFactory") && x.Contains("CreateChannel"): // System.ServiceModel.ChannelFactory`1<ClassName.ClassName>::CreateChannel()
-                                gadgetName = x;
+                                //gadgetName = x.Replace("()","");
                                 isWCFClient = true;
                                 break;
                             // Collect the TypeFilterLevel if it is explicitly set
@@ -483,7 +485,7 @@ MethodAppearance     : {5}
                         }
                     }
                     
-                    if (!string.IsNullOrEmpty(gadgetName))
+                    if (!string.IsNullOrEmpty(gadgetName) || isWCFClient || isWCFServer || isRemoting)
                     {
                         listGadgets.Add(new GadgetItem()
                         {
@@ -493,7 +495,7 @@ MethodAppearance     : {5}
                             IsWCFClient = isWCFClient,
                             IsWCFServer = isWCFServer,
                             MethodAppearance = String.Format("{0}.{1}", method.t.Name, method.m.Name),
-                            FilterLevel = filterLevel
+                            FilterLevel = gadgetName.Contains(bfDeserialize) ?  filterLevel : null
                         });
                     }
                 }
