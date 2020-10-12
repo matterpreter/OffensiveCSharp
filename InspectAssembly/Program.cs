@@ -320,7 +320,7 @@ Arguments:
 
             public override string ToString()
             {
-                return !string.IsNullOrEmpty(FilterLevel) ? string.Format("{0} (Filter Level: {1}", MethodName, FilterLevel) : MethodName;
+                return !string.IsNullOrEmpty(FilterLevel) ? string.Format("{0} (Filter Level: {1})", MethodName, FilterLevel) : MethodName;
             }
         }
 
