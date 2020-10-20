@@ -16,12 +16,27 @@ namespace HijackHunter
         // Global list for tracking all hijacks through recursion
         public static List<PEDetails> g_Hijackables = new List<PEDetails>();
         public static bool quietMode = false;
+        
 
         static void Main(string[] args)
         {
+            string fileName;
             // Make sure the target file exists
-            string fileName = args[0];
+            try
+            {
+                fileName = args[0];
+            }
+            catch(Exception m)
+            {
+                Console.WriteLine(m.ToString());
+                return;
+            }
             g_basePath = Path.GetDirectoryName(fileName);
+            if(g_basePath == "")
+            {
+                string tmp = fileName;
+                fileName = String.Concat(".\\", tmp);
+            }
             if (!File.Exists(fileName))
             {
                 Console.WriteLine("[-] Can't access {0}", fileName);
@@ -102,6 +117,7 @@ namespace HijackHunter
             {
                 Console.WriteLine("[-] No hijacks found");
             }
+            
         }
 
         public struct PEDetails
@@ -116,7 +132,8 @@ namespace HijackHunter
 
         static void RecursiveHunter(string fileName, byte[] fileBytes, bool isRoot, string target, int indent)
         {
-            PEDetails targetFile = new PEDetails
+            
+           PEDetails targetFile = new PEDetails
             {
                 Name = fileName,
                 Path = Path.GetDirectoryName(fileName),
@@ -157,8 +174,9 @@ namespace HijackHunter
                                 targetFile.Path = FindFilePath(dll, Path.GetDirectoryName(targetFile.Path));
 
                                 string hijackResult = HijackChecks(targetFile, false);
-                                if (targetFile.Path != null)
+                                if (targetFile.Path != null && !targetFile.Path.Contains("system32")) // recursing into system32 breaks the program. 
                                 {
+
                                     if (!quietMode) { Console.WriteLine(output + hijackResult); }
                                     // Start processing it through recursion
                                     byte[] newFile = File.ReadAllBytes(targetFile.Path);
@@ -166,7 +184,10 @@ namespace HijackHunter
                                 }
                                 else // Handle DLLs that are missing from the search order
                                 {
-                                    if (!quietMode) { Console.WriteLine(output + " [HIJACKABLE]"); }
+                                    if (!quietMode)
+                                    {
+                                        Console.WriteLine(output + " --> " + hijackResult);
+                                    }
                                 }
                             }
                             catch (Exception ex)
@@ -240,8 +261,9 @@ namespace HijackHunter
                 return " [API Set]";
             }
 
-            // Hacky way to catch 
-            if (CheckDirectoryWritePermissions(g_basePath) && peDetails.Name != "ntdll.dll")
+            // Hacky way to catch --> works sometimes. Skipped 1 part and it works
+            // CheckDirectoryWritePermissions(g_basePath) && peDetails.Name != "ntdll.dll"
+            if (peDetails.Name != "ntdll.dll")
             {
                 if (!File.Exists(g_basePath + @"\" + peDetails.Name))
                 {
@@ -380,11 +402,17 @@ namespace HijackHunter
         static bool CheckDirectoryWritePermissions(string path)
         {
             // https://stackoverflow.com/a/1281638
+            DirectorySecurity acl;
             bool writeAllow = false;
             bool writeDeny = false;
-            DirectorySecurity acl = Directory.GetAccessControl(path);
-            if (acl == null)
+            try
+            {
+                acl = Directory.GetAccessControl(path);
+            }
+            catch (Exception) // null ACL errors out with exceptions regardless of checking for null. 
+            {
                 return false;
+            }
             AuthorizationRuleCollection accessRules = acl.GetAccessRules(true, true, typeof(SecurityIdentifier));
 
             if (accessRules == null)
