@@ -63,7 +63,7 @@ namespace HijackHunter
                     uint itRVA = DataDirectory->VirtualAddress;
                     if (itRVA == 0)
                     {
-                        //Console.WriteLine("[!] Import Table RVA is 0. Something is wrong...");
+                        Console.WriteLine("[!] Import Table RVA is 0. Something is wrong...");
                         return null;
                     }
 
@@ -99,7 +99,7 @@ namespace HijackHunter
                     uint itRVA = DataDirectory->VirtualAddress;
                     if (itRVA == 0)
                     {
-                        //Console.WriteLine("[!] Import Table RVA is 0. Something is wrong...");
+                        Console.WriteLine("[!] Import Table RVA is 0. Something is wrong...");
                         return null;
                     }
 
@@ -414,7 +414,7 @@ namespace HijackHunter
             public uint SizeOfUninitializedData;
             public uint AddressOfEntryPoint;
             public uint BaseOfCode;
-            public IntPtr ImageBase;
+            public ulong ImageBase;
             public uint SectionAlignment;
             public uint FileAlignment;
             public ushort MajorOperatingSystemVersion;
