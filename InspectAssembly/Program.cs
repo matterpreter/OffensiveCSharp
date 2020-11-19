@@ -12,6 +12,22 @@ namespace InspectAssembly
 {
     class Program
     {
+        private const string BF_DESERIALIZE = "System.Runtime.Serialization.Formatters.Binary.BinaryFormatter::Deserialize";
+        private const string DC_JSON_READ_OBJ = "System.Runtime.Serialization.Json.DataContractJsonSerializer::ReadObject";
+        private const string DC_XML_READ_OBJ = "System.Runtime.Serialization.Xml.DataContractSerializer::ReadObject";
+        private const string JS_SERIALIZER_DESERIALIZE = "System.Web.Script.Serialization.JavaScriptSerializer::Deserialize";
+        private const string LOS_FORMATTER_DESERIALIZE = "System.Web.UI.LosFormatter::Deserialize";
+        private const string NET_DATA_CONTRACT_READ_OBJ = "System.Runtime.Serialization.NetDataContractSerializer::ReadObject";
+        private const string NET_DATA_CONTRACT_DESERIALIZE = "System.Runtime.Serialization.NetDataContractSerializer::Deserialize";
+        private const string OBJ_STATE_FORMATTER_DESERIALIZE = "System.Web.UI.ObjectStateFormatter::Deserialize";
+        private const string SOAP_FORMATTER_DESERIALIZE = "System.Runtime.Serialization.Formatters.Soap.SoapFormatter::Deserialize";
+        private const string XML_SERIALIZER_DESERIALIZE = "System.Xml.Serialization.XmlSerializer::Deserialize";
+        private const string REGISTER_CHANNEL = "System.Runtime.Remoting.Channels.ChannelServices::RegisterChannel";
+        private const string WCF_SERVER_STRING = "System.ServiceModel.ServiceHost::AddServiceEndpoint";
+        private const string WCF_CLIENT_STRING = "System.ServiceModel.ChannelFactory::CreateChannel";
+
+        private static string[] wcfServerGadgetNames = { WCF_SERVER_STRING };
+
         static Dictionary<string, object> ArgParser(string[] args)
         {
             Dictionary<string, object> result = new Dictionary<string, object>();
@@ -39,6 +55,13 @@ namespace InspectAssembly
             }
             if (result.ContainsKey("path"))
             {
+                string path = result["path"].ToString();
+                if ((path.StartsWith("'") && path.EndsWith("'")) ||
+                    (path.StartsWith("\"") && path.EndsWith("\"")))
+                {
+                    path = path.Substring(1, path.Length - 2);
+                    result["path"] = path;
+                }
                 if (!File.Exists((string)result["path"]) && !Directory.Exists((string)result["path"]))
                     throw new Exception(String.Format("File or directory {0} does not exist.", result["path"]));
             } else
@@ -237,6 +260,8 @@ Arguments:
             internal bool IsWCFServer;
             internal bool IsWCFClient;
             Dictionary<string, MethodInfo[]> GadgetCalls;
+            Dictionary<string, MethodInfo[]> ServerCalls;
+            Dictionary<string, MethodInfo[]> ClientCalls;
 
             public AssemblyGadgetAnalysis(string assemblyName, GadgetItem[] items)
             {
@@ -244,68 +269,114 @@ Arguments:
                 IsWCFClient = false;
                 IsWCFServer = false;
                 Dictionary<string, List<MethodInfo>> temp = new Dictionary<string, List<MethodInfo>>();
+                Dictionary<string, List<MethodInfo>> tempClient = new Dictionary<string, List<MethodInfo>>();
+                Dictionary<string, List<MethodInfo>> tempServer = new Dictionary<string, List<MethodInfo>>();
                 List<string> dnRemotingChannels = new List<string>();
+                List<GadgetItem> serverGadgets = new List<GadgetItem>();
+                List<GadgetItem> clientGadgets = new List<GadgetItem>();
                 foreach(var gadget in items)
                 {
-                    if (!temp.ContainsKey(gadget.GadgetName))
+                    if (gadget.IsWCFClient && !tempClient.ContainsKey(gadget.GadgetName))
+                        tempClient[gadget.GadgetName] = new List<MethodInfo>();
+                    else if (gadget.IsWCFServer && !tempServer.ContainsKey(gadget.GadgetName))
+                        tempServer[gadget.GadgetName] = new List<MethodInfo>();
+                    else if (!temp.ContainsKey(gadget.GadgetName))
                         temp[gadget.GadgetName] = new List<MethodInfo>();
-                    temp[gadget.GadgetName].Add(new MethodInfo()
+                    if (gadget.IsWCFClient)
                     {
-                        MethodName = gadget.MethodAppearance,
-                        FilterLevel = gadget.FilterLevel
-                    });
+                        tempClient[gadget.GadgetName].Add(new MethodInfo()
+                        {
+                            MethodName = gadget.MethodAppearance,
+                            FilterLevel = gadget.FilterLevel
+                        });
+                    } else if (gadget.IsWCFServer)
+                    {
+                        tempServer[gadget.GadgetName].Add(new MethodInfo()
+                        {
+                            MethodName = gadget.MethodAppearance,
+                            FilterLevel = gadget.FilterLevel
+                        });
+                    } else
+                    {
+                        temp[gadget.GadgetName].Add(new MethodInfo()
+                        {
+                            MethodName = gadget.MethodAppearance,
+                            FilterLevel = gadget.FilterLevel
+                        });
+                    }
                     if (gadget.IsDotNetRemoting)
                         dnRemotingChannels.Add(gadget.RemotingChannel);
-                    if (gadget.IsWCFClient)
-                        IsWCFClient = true;
-                    if (gadget.IsWCFServer)
-                        IsWCFServer = true;
                 }
                 RemotingChannels = dnRemotingChannels.ToArray();
                 GadgetCalls = new Dictionary<string, MethodInfo[]>();
-                foreach(var key in temp.Keys)
+                ClientCalls = new Dictionary<string, MethodInfo[]>();
+                ServerCalls = new Dictionary<string, MethodInfo[]>();
+                foreach (var key in temp.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
                         GadgetCalls[key] = temp[key].ToArray();
                 }
+                foreach (var key in tempClient.Keys)
+                {
+                    if (!string.IsNullOrEmpty(key))
+                        ClientCalls[key] = tempClient[key].ToArray();
+                }
+                foreach (var key in tempServer.Keys)
+                {
+                    if (!string.IsNullOrEmpty(key))
+                        ServerCalls[key] = tempServer[key].ToArray();
+                }
+            }
+
+            private static string FormatGadgets(Dictionary<string, MethodInfo[]> tmp)
+            {
+                string fmtStr = "";
+                foreach (var key in tmp.Keys)
+                {
+                    string[] gadgetParts = key.Replace("::", "|").Split('|');
+                    string gadget;
+                    if (gadgetParts.Length != 2)
+                        gadget = key;
+                    else
+                    {
+                        string[] typeParts = gadgetParts[0].Split('.');
+                        gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
+                    }
+                    fmtStr += String.Format("\t\t{0} is called in the following methods:\n", gadget);
+                    foreach (var mi in tmp[key])
+                    {
+                        fmtStr += String.Format("\t\t\t{0}\n", mi.ToString());
+                    }
+                    fmtStr += "\n";
+                }
+                return fmtStr;
             }
 
             public override string ToString()
             {
                 string fmtStr = "";
+                var tmp = GadgetCalls;
                 if (RemotingChannels.Length > 0)
                 {
                     fmtStr += string.Format("\t.NET Remoting Channels:\n");
                     foreach (var chan in RemotingChannels)
                         fmtStr += string.Format("\t\t{0}\n", chan);
                 }
-                if (IsWCFClient)
+                if (ClientCalls.Keys.Count > 0)
                 {
-                    fmtStr += "\tWCFClient\n";
+                    fmtStr += "\tWCFClient Gadgets:\n";
+                    fmtStr += FormatGadgets(ClientCalls);
                 }
-                if (IsWCFServer)
-                    fmtStr += "\tWCFServer\n";
+                if (ServerCalls.Keys.Count > 0)
+                {
+                    fmtStr += "\tWCFServer Gadgets:\n";
+                    fmtStr += FormatGadgets(ServerCalls);
+
+                }
                 if (GadgetCalls.Keys.Count > 0)
                 {
                     fmtStr += "\tSerialization Gadgets:\n";
-                    foreach (var key in GadgetCalls.Keys)
-                    {
-                        string[] gadgetParts = key.Replace("::", "|").Split('|');
-                        string gadget;
-                        if (gadgetParts.Length != 2)
-                            gadget = key;
-                        else
-                        {
-                            string[] typeParts = gadgetParts[0].Split('.');
-                            gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
-                        }
-                        fmtStr += String.Format("\t\t{0} is called in the following methods:\n", gadget);
-                        foreach (var mi in GadgetCalls[key])
-                        {
-                            fmtStr += String.Format("\t\t\t{0}\n", mi.ToString());
-                        }
-                        fmtStr += "\n";
-                    }
+                    fmtStr += FormatGadgets(GadgetCalls);
                 }
                 if (fmtStr != "")
                     fmtStr = String.Format("Assembly Name: {0}\n", AssemblyName) + fmtStr;
@@ -367,30 +438,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
             string filterLevel = "Low";
             bool hit = false;
             List<GadgetItem> listGadgets = new List<GadgetItem>();
-            //Dictionary<string, List<string>> methodTally = new Dictionary<string, List<string>>();
-            //methodTally["System.Runtime.Serialization.Formatters.Binary.BinaryFormatter::Deserialize"] = new List<string>();
-            //methodTally["System.Runtime.Serialization.Json.DataContractJsonSerializer::ReadObject"] = new List<string>();
-            //methodTally["System.Runtime.Serialization.Xml.DataContractSerializer::ReadObject"] = new List<string>();
-            //methodTally["System.Web.Script.Serialization.JavaScriptSerializer::Deserialize"] = new List<string>();
-            //methodTally["System.Web.UI.LosFormatter::Deserialize"] = new List<string>();
-            //methodTally["System.Runtime.Serialization.NetDataContractSerializer::ReadObject"] = new List<string>();
-            //methodTally["System.Runtime.Serialization.NetDataContractSerializer::Deserialize"] = new List<string>();
-            //methodTally["System.Web.UI.ObjectStateFormatter::Deserialize"] = new List<string>();
-            //methodTally["System.Runtime.Serialization.Formatters.Soap.SoapFormatter::Deserialize"] = new List<string>();
-            //methodTally["System.Xml.Serialization.XmlSerializer::Deserialize"] = new List<string>();
 
-            string bfDeserialize = "System.Runtime.Serialization.Formatters.Binary.BinaryFormatter::Deserialize";
-            string dcJsonReadObj = "System.Runtime.Serialization.Json.DataContractJsonSerializer::ReadObject";
-            string dcXmlReadObj = "System.Runtime.Serialization.Xml.DataContractSerializer::ReadObject";
-            string jsSerializerDeserialize = "System.Web.Script.Serialization.JavaScriptSerializer::Deserialize";
-            string losFormatterDeserialize = "System.Web.UI.LosFormatter::Deserialize";
-            string netDataContractReadObject = "System.Runtime.Serialization.NetDataContractSerializer::ReadObject";
-            string netDataContractDeserialize = "System.Runtime.Serialization.NetDataContractSerializer::Deserialize";
-            string objStateFormatterDeserialize = "System.Web.UI.ObjectStateFormatter::Deserialize";
-            string soapFormatterDeserialize = "System.Runtime.Serialization.Formatters.Soap.SoapFormatter::Deserialize";
-            string xmlSerializerDeserialize = "System.Xml.Serialization.XmlSerializer::Deserialize";
-            string registerChannel = "System.Runtime.Remoting.Channels.ChannelServices::RegisterChannel";
-            string wcfServerString = "System.ServiceModel.ServiceHost::AddServiceEndpoint";
 
 
 
@@ -419,42 +467,42 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                     {
                         switch (instruction.Operand.ToString())
                         {
-                            case string x when x.Contains(bfDeserialize):
-                                gadgetName = bfDeserialize;
+                            case string x when x.Contains(BF_DESERIALIZE):
+                                gadgetName = BF_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(dcJsonReadObj):
-                                gadgetName = dcJsonReadObj;
+                            case string x when x.Contains(DC_JSON_READ_OBJ):
+                                gadgetName = DC_JSON_READ_OBJ;
                                 break;
-                            case string x when x.Contains(dcXmlReadObj):
-                                gadgetName = dcXmlReadObj;
+                            case string x when x.Contains(DC_XML_READ_OBJ):
+                                gadgetName = DC_XML_READ_OBJ;
                                 break;
-                            case string x when x.Contains(jsSerializerDeserialize):
-                                gadgetName = jsSerializerDeserialize;
+                            case string x when x.Contains(JS_SERIALIZER_DESERIALIZE):
+                                gadgetName = JS_SERIALIZER_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(losFormatterDeserialize):
-                                gadgetName = losFormatterDeserialize;
+                            case string x when x.Contains(LOS_FORMATTER_DESERIALIZE):
+                                gadgetName = LOS_FORMATTER_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(netDataContractReadObject):
-                                gadgetName = netDataContractReadObject;
+                            case string x when x.Contains(NET_DATA_CONTRACT_READ_OBJ):
+                                gadgetName = NET_DATA_CONTRACT_READ_OBJ;
                                 break;
-                            case string x when x.Contains(netDataContractDeserialize):
-                                gadgetName = netDataContractDeserialize;
+                            case string x when x.Contains(NET_DATA_CONTRACT_DESERIALIZE):
+                                gadgetName = NET_DATA_CONTRACT_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(objStateFormatterDeserialize):
-                                gadgetName = objStateFormatterDeserialize;
+                            case string x when x.Contains(OBJ_STATE_FORMATTER_DESERIALIZE):
+                                gadgetName = OBJ_STATE_FORMATTER_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(soapFormatterDeserialize):
-                                gadgetName = soapFormatterDeserialize;
+                            case string x when x.Contains(SOAP_FORMATTER_DESERIALIZE):
+                                gadgetName = SOAP_FORMATTER_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(xmlSerializerDeserialize):
-                                gadgetName = xmlSerializerDeserialize;
+                            case string x when x.Contains(XML_SERIALIZER_DESERIALIZE):
+                                gadgetName = XML_SERIALIZER_DESERIALIZE;
                                 break;
-                            case string x when x.Contains(wcfServerString):
-                                gadgetName = "System.ServiceModel.ServiceHost::AddServiceEndpoint";
+                            case string x when x.Contains(WCF_SERVER_STRING):
+                                gadgetName = WCF_SERVER_STRING;
                                 isWCFServer = true;
                                 break;
                             case string x when x.Contains("System.ServiceModel.ChannelFactory") && x.Contains("CreateChannel"): // System.ServiceModel.ChannelFactory`1<ClassName.ClassName>::CreateChannel()
-                                //gadgetName = x.Replace("()","");
+                                gadgetName = WCF_CLIENT_STRING;
                                 isWCFClient = true;
                                 break;
                             // Collect the TypeFilterLevel if it is explicitly set
@@ -477,9 +525,9 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                     {
                         switch (instruction.Operand.ToString())
                         {
-                            case string x when x.Contains(registerChannel):
+                            case string x when x.Contains(REGISTER_CHANNEL):
                                 isRemoting = true;
-                                gadgetName = registerChannel;
+                                gadgetName = REGISTER_CHANNEL;
                                 remotingChannel = dnrChannel[5];
                                 break;
                         }
@@ -495,7 +543,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                             IsWCFClient = isWCFClient,
                             IsWCFServer = isWCFServer,
                             MethodAppearance = String.Format("{0}.{1}", method.t.Name, method.m.Name),
-                            FilterLevel = gadgetName.Contains(bfDeserialize) ?  filterLevel : null
+                            FilterLevel = gadgetName.Contains(BF_DESERIALIZE) ?  filterLevel : null
                         });
                     }
                 }
