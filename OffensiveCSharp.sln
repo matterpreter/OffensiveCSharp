@@ -30,7 +30,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InspectAssembly", "InspectA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HijackHunter", "HijackHunter\HijackHunter.csproj", "{F729228E-A0FA-463E-BD35-92C0B78435E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COMHunter", "COMHunter\COMHunter.csproj", "{CD965B94-C4ED-4E7F-8E02-BF47E4387EB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "COMHunter", "COMHunter\COMHunter.csproj", "{E5291D34-7D97-4C67-A8D8-69F36263473D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HookDetector", "HookDetector\HookDetector.csproj", "{0C30E330-0E85-4D86-8104-E47302DBF592}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -94,10 +96,14 @@ Global
 		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Debug|anycpu.Build.0 = Debug|Any CPU
 		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Release|anycpu.ActiveCfg = Release|Any CPU
 		{F729228E-A0FA-463E-BD35-92C0B78435E9}.Release|anycpu.Build.0 = Release|Any CPU
-		{CD965B94-C4ED-4E7F-8E02-BF47E4387EB1}.Debug|anycpu.ActiveCfg = Debug|anycpu
-		{CD965B94-C4ED-4E7F-8E02-BF47E4387EB1}.Debug|anycpu.Build.0 = Debug|anycpu
-		{CD965B94-C4ED-4E7F-8E02-BF47E4387EB1}.Release|anycpu.ActiveCfg = Release|anycpu
-		{CD965B94-C4ED-4E7F-8E02-BF47E4387EB1}.Release|anycpu.Build.0 = Release|anycpu
+		{E5291D34-7D97-4C67-A8D8-69F36263473D}.Debug|anycpu.ActiveCfg = Debug|anycpu
+		{E5291D34-7D97-4C67-A8D8-69F36263473D}.Debug|anycpu.Build.0 = Debug|anycpu
+		{E5291D34-7D97-4C67-A8D8-69F36263473D}.Release|anycpu.ActiveCfg = Release|anycpu
+		{E5291D34-7D97-4C67-A8D8-69F36263473D}.Release|anycpu.Build.0 = Release|anycpu
+		{0C30E330-0E85-4D86-8104-E47302DBF592}.Debug|anycpu.ActiveCfg = Debug|Any CPU
+		{0C30E330-0E85-4D86-8104-E47302DBF592}.Debug|anycpu.Build.0 = Debug|Any CPU
+		{0C30E330-0E85-4D86-8104-E47302DBF592}.Release|anycpu.ActiveCfg = Release|Any CPU
+		{0C30E330-0E85-4D86-8104-E47302DBF592}.Release|anycpu.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
