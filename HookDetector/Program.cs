@@ -35,8 +35,13 @@ namespace HookDetector
             0xb8              // mov eax, ??
         };
 
-        static void Main(string[] args)
+        static void Main()
         {
+            if (!GetProcessArch())
+            {
+                Console.WriteLine("[-] It looks like you're not running x64.");
+                return;
+            }
             // Get the base address of ntdll.dll in our own process
             IntPtr ntdllBase = GetNTDLLBase();
             if (ntdllBase == IntPtr.Zero)
@@ -90,11 +95,35 @@ namespace HookDetector
             IDictionary<string, IntPtr> funcAddresses = new Dictionary<string, IntPtr>();
             foreach (string function in functions)
             {
-                // TODO: Add error handling here in case function is not found (e.g. typo by user)
-                funcAddresses.Add(function, Win32.GetProcAddress(hModule, function));
+                IntPtr funcPtr = Win32.GetProcAddress(hModule, function);
+                if (funcPtr != IntPtr.Zero)
+                {
+                    funcAddresses.Add(function,funcPtr);
+                }
+                else
+                {
+                    Console.WriteLine("[-] Couldn't locate the address for {0}! (Error: {1})", function, Marshal.GetLastWin32Error());
+                }
             }
 
             return funcAddresses;
+        }
+
+        static bool GetProcessArch()
+        {
+            // Make sure that we're running x64 on x64
+            bool wow64;
+            Win32.IsWow64Process(Process.GetCurrentProcess().Handle, out wow64);
+
+            if (Environment.Is64BitProcess && !wow64)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
         }
     }
 
@@ -102,5 +131,8 @@ namespace HookDetector
     {
         [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
         public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        public static extern bool IsWow64Process(IntPtr hProcess, out bool Wow64Process);
     }
 }
