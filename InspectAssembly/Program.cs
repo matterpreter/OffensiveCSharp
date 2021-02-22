@@ -161,7 +161,6 @@ Arguments:
                 }
             } else
             {
-                int[] test;
                 List<Process> procs = new List<Process>();
                 object pidArg = arguments["pid"];
                 if (pidArg is int)
@@ -181,7 +180,7 @@ Arguments:
                         try
                         {
                             procs.Add(Process.GetProcessById((int)id));
-                        } catch (Exception ex)
+                        } catch (Exception)
                         {
                             continue;
                         }
@@ -195,7 +194,7 @@ Arguments:
                         {
                             procs.Add(proc);
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         { continue; }
                     }
                 }
@@ -211,7 +210,7 @@ Arguments:
                         string pathName = proc.MainModule.FileName;
                         AssemblyName assemblyName = AssemblyName.GetAssemblyName(pathName);
                         results.Add(InspectAssembly(pathName));
-                    } catch (Exception ex)
+                    } catch (Exception)
                     { continue; }
                 }
             }
@@ -240,7 +239,7 @@ Arguments:
                                 File.WriteAllText(arguments["outfile"].ToString(), resultStr);
                                 Console.WriteLine("[+] Wrote results to {0}", arguments["outfile"]);
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 Console.WriteLine("[-] Failed to write output file: {0}", arguments["outfile"]);
                             }
@@ -441,12 +440,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
             string[] dnrChannel = { };
             string typeFilterLevel = "ldc.i4.2"; // Default opcode if not set manually
             string filterLevel = "Low";
-            bool hit = false;
             List<GadgetItem> listGadgets = new List<GadgetItem>();
-
-
-
-
 
             // Parse the target assembly and get its types
             AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(assemblyName);
