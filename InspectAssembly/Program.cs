@@ -62,7 +62,7 @@ namespace InspectAssembly
                     path = path.Substring(1, path.Length - 2);
                     result["path"] = path;
                 }
-                if (!File.Exists((string)result["path"]) && !Directory.Exists((string)result["path"]))
+                if (!File.Exists((string)result["path"]) && !Directory.Exists((string)result["path"]) && !Directory.Exists((string)result["path"] + '\\'))
                     throw new Exception(String.Format("File or directory {0} does not exist.", result["path"]));
             } else
             {
