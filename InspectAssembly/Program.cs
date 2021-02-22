@@ -342,12 +342,12 @@ Arguments:
                         string[] typeParts = gadgetParts[0].Split('.');
                         gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
                     }
-                    fmtStr += String.Format("\t\t{0} is called in the following methods:\n", gadget);
+                    fmtStr += String.Format($"{"",4}{gadget} is called in the following methods:\n");
 
                     var methods = tmp[key].Distinct();
                     foreach (var method in methods)
                     {
-                        fmtStr += String.Format("\t\t\t{0}\n", method);
+                        fmtStr += String.Format($"{"",6}{method}\n");
                     }
                     fmtStr += "\n";
                 }
@@ -360,24 +360,24 @@ Arguments:
                 var tmp = GadgetCalls;
                 if (RemotingChannels.Length > 0)
                 {
-                    fmtStr += string.Format("\t.NET Remoting Channels:\n");
+                    fmtStr += string.Format("  .NET Remoting Channels:\n");
                     foreach (var chan in RemotingChannels)
                         fmtStr += string.Format("\t\t{0}\n", chan);
                 }
                 if (ClientCalls.Keys.Count > 0)
                 {
-                    fmtStr += "\tWCFClient Gadgets:\n";
+                    fmtStr += "  WCFClient Gadgets:\n";
                     fmtStr += FormatGadgets(ClientCalls);
                 }
                 if (ServerCalls.Keys.Count > 0)
                 {
-                    fmtStr += "\tWCFServer Gadgets:\n";
+                    fmtStr += "  WCFServer Gadgets:\n";
                     fmtStr += FormatGadgets(ServerCalls);
 
                 }
                 if (GadgetCalls.Keys.Count > 0)
                 {
-                    fmtStr += "\tSerialization Gadgets:\n";
+                    fmtStr += "  Serialization Gadgets:\n";
                     fmtStr += FormatGadgets(GadgetCalls);
                 }
                 if (fmtStr != "")
