@@ -20,7 +20,7 @@ namespace HijackHunter
         static void Main(string[] args)
         {
             // Make sure the target file exists
-            string fileName = args[0];
+            string fileName = Path.GetFullPath(args[0]);
             g_basePath = Path.GetDirectoryName(fileName);
             if (!File.Exists(fileName))
             {
