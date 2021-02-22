@@ -343,9 +343,11 @@ Arguments:
                         gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
                     }
                     fmtStr += String.Format("\t\t{0} is called in the following methods:\n", gadget);
-                    foreach (var mi in tmp[key])
+
+                    var methods = tmp[key].Distinct();
+                    foreach (var method in methods)
                     {
-                        fmtStr += String.Format("\t\t\t{0}\n", mi.ToString());
+                        fmtStr += String.Format("\t\t\t{0}\n", method);
                     }
                     fmtStr += "\n";
                 }
