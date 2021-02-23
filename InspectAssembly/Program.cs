@@ -261,9 +261,10 @@ Arguments:
             internal string[] RemotingChannels;
             internal bool IsWCFServer;
             internal bool IsWCFClient;
-            Dictionary<string, MethodInfo[]> GadgetCalls;
-            Dictionary<string, MethodInfo[]> ServerCalls;
+            Dictionary<string, MethodInfo[]> SerializationGadgetCalls;
+            Dictionary<string, MethodInfo[]> WcfServerCalls;
             Dictionary<string, MethodInfo[]> ClientCalls;
+            Dictionary<string, MethodInfo[]> RemotingCalls;
 
             public AssemblyGadgetAnalysis(string assemblyName, GadgetItem[] items)
             {
@@ -273,6 +274,7 @@ Arguments:
                 Dictionary<string, List<MethodInfo>> temp = new Dictionary<string, List<MethodInfo>>();
                 Dictionary<string, List<MethodInfo>> tempClient = new Dictionary<string, List<MethodInfo>>();
                 Dictionary<string, List<MethodInfo>> tempServer = new Dictionary<string, List<MethodInfo>>();
+                Dictionary<string, List<MethodInfo>> tempRemoting = new Dictionary<string, List<MethodInfo>>();
                 List<string> dnRemotingChannels = new List<string>();
                 List<GadgetItem> serverGadgets = new List<GadgetItem>();
                 List<GadgetItem> clientGadgets = new List<GadgetItem>();
@@ -282,6 +284,8 @@ Arguments:
                         tempClient[gadget.GadgetName] = new List<MethodInfo>();
                     else if (gadget.IsWCFServer && !tempServer.ContainsKey(gadget.GadgetName))
                         tempServer[gadget.GadgetName] = new List<MethodInfo>();
+                    if (gadget.IsDotNetRemoting && !tempClient.ContainsKey(gadget.GadgetName))
+                        tempRemoting[gadget.GadgetName] = new List<MethodInfo>();
                     else if (!temp.ContainsKey(gadget.GadgetName))
                         temp[gadget.GadgetName] = new List<MethodInfo>();
                     if (gadget.IsWCFClient)
@@ -298,6 +302,13 @@ Arguments:
                             MethodName = gadget.MethodAppearance,
                             FilterLevel = gadget.FilterLevel
                         });
+                    } else if (gadget.IsDotNetRemoting)
+                    {
+                        tempRemoting[gadget.GadgetName].Add(new MethodInfo()
+                        {
+                            MethodName = gadget.MethodAppearance,
+                            FilterLevel = gadget.FilterLevel
+                        });
                     } else
                     {
                         temp[gadget.GadgetName].Add(new MethodInfo()
@@ -310,13 +321,14 @@ Arguments:
                         dnRemotingChannels.Add(gadget.RemotingChannel);
                 }
                 RemotingChannels = dnRemotingChannels.ToArray();
-                GadgetCalls = new Dictionary<string, MethodInfo[]>();
+                SerializationGadgetCalls = new Dictionary<string, MethodInfo[]>();
                 ClientCalls = new Dictionary<string, MethodInfo[]>();
-                ServerCalls = new Dictionary<string, MethodInfo[]>();
+                WcfServerCalls = new Dictionary<string, MethodInfo[]>();
+                RemotingCalls = new Dictionary<string, MethodInfo[]>();
                 foreach (var key in temp.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
-                        GadgetCalls[key] = temp[key].ToArray();
+                        SerializationGadgetCalls[key] = temp[key].ToArray();
                 }
                 foreach (var key in tempClient.Keys)
                 {
@@ -326,7 +338,12 @@ Arguments:
                 foreach (var key in tempServer.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
-                        ServerCalls[key] = tempServer[key].ToArray();
+                        WcfServerCalls[key] = tempServer[key].ToArray();
+                }
+                foreach (var key in tempRemoting.Keys)
+                {
+                    if (!string.IsNullOrEmpty(key))
+                        RemotingCalls[key] = tempRemoting[key].ToArray();
                 }
             }
 
@@ -359,28 +376,39 @@ Arguments:
             public override string ToString()
             {
                 string fmtStr = "";
-                var tmp = GadgetCalls;
-                if (RemotingChannels.Length > 0)
+                var tmp = SerializationGadgetCalls;
+                //if (RemotingChannels.Length > 0)
+                //{
+                //    fmtStr += string.Format("  .NET Remoting Channels:\n");
+                //    foreach (var chan in RemotingChannels)
+                //        fmtStr += string.Format("    {0}\n", chan);
+                //}
+                if (RemotingCalls.Keys.Count > 0)
                 {
-                    fmtStr += string.Format("  .NET Remoting Channels:\n");
-                    foreach (var chan in RemotingChannels)
-                        fmtStr += string.Format("\t\t{0}\n", chan);
+                    fmtStr += "  .NET Remoting:\n";
+                    fmtStr += FormatGadgets(RemotingCalls);
+
+                    fmtStr += "    Remoting Channels:\n";
+                    if (RemotingChannels.Length > 0)
+                    {
+                        foreach (var chan in RemotingChannels)
+                            fmtStr += string.Format("      {0}\n", chan);
+                    }
                 }
                 if (ClientCalls.Keys.Count > 0)
                 {
                     fmtStr += "  WCFClient Gadgets:\n";
                     fmtStr += FormatGadgets(ClientCalls);
                 }
-                if (ServerCalls.Keys.Count > 0)
+                if (WcfServerCalls.Keys.Count > 0)
                 {
                     fmtStr += "  WCFServer Gadgets:\n";
-                    fmtStr += FormatGadgets(ServerCalls);
-
+                    fmtStr += FormatGadgets(WcfServerCalls);
                 }
-                if (GadgetCalls.Keys.Count > 0)
+                if (SerializationGadgetCalls.Keys.Count > 0)
                 {
                     fmtStr += "  Serialization Gadgets:\n";
-                    fmtStr += FormatGadgets(GadgetCalls);
+                    fmtStr += FormatGadgets(SerializationGadgetCalls);
                 }
                 if (fmtStr != "")
                     fmtStr = String.Format("Assembly Name: {0}\n", AssemblyName) + fmtStr;
