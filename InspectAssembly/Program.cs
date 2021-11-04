@@ -150,7 +150,11 @@ Arguments:
                     } catch { }
                 } else
                 {
-                    foreach(var f in Directory.GetFiles(path))
+                    IEnumerable<string> files;
+                    var exes = Directory.GetFiles(path, "*.exe"); // ~320
+                    var dlls = Directory.GetFiles(path, "*.dll"); // ~2800
+                    files = exes.Concat(dlls);
+                    foreach (var f in files)
                     {
                         try
                         {
