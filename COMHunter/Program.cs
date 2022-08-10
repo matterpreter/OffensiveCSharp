@@ -1,14 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace COMHunter
 {
     class Program
     {
-        public static string usage = "Usage: COMHunter.exe <-inproc|-localserver>";
+        public static string usage = "Usage: COMHunter.exe [-inproc | -localserver] [-includesystem]";
 
         public struct COMServer
         {
@@ -17,22 +20,60 @@ namespace COMHunter
             public string Type;
         }
         
+        // Trim function is not present on .NET versions < 4.6
+        public static string TrimEnd(string source, string value)
+        {
+            if (!source.EndsWith(value)) {
+                return source;
+            }
+            return source.Remove(source.LastIndexOf(value));
+        }
+        
         static void Main(string[] args)
         {
             List<COMServer> servers = new List<COMServer>();
 
-            if (args.Length == 0)
-            {
-                servers = WMICollection("InprocServer32");
-                servers.AddRange(WMICollection("LocalServer32"));
+            HashSet<string> exclusionSet = new HashSet<string>();
+            exclusionSet.Add("ToString");
+            exclusionSet.Add("GetLifetimeService");
+            exclusionSet.Add("InitializeLifetimeService");
+            exclusionSet.Add("CreateObjRef");
+            exclusionSet.Add("Equals");
+            exclusionSet.Add("GetHashCode");
+            exclusionSet.Add("GetType");
+
+            bool includeSystem = false;
+            bool inproc = true;
+            bool localserver = true;
+            foreach(string arg in args) {
+                if (arg.Equals("-includesystem")) {
+                    includeSystem = true;
+                } else if (arg.Equals("-inproc")) {
+                    localserver = false;
+                } else if (arg.Equals("-localserver")) {
+                    inproc = false;
+                } else {
+                    Console.WriteLine(usage);
+                    return;
+                }
             }
-            else if(args[0] == "-inproc")
-            {
-                servers = WMICollection("InprocServer32");
+            
+            if (!inproc && !localserver) {
+                inproc = localserver = true;	    
             }
-            else if (args[0] == "-localserver")
+
+            if (inproc && localserver)
             {
-                servers = WMICollection("LocalServer32");
+                servers = WMICollection("InprocServer32", includeSystem);
+                servers.AddRange(WMICollection("LocalServer32", includeSystem));
+            }
+            else if (inproc)
+            {
+                servers = WMICollection("InprocServer32", includeSystem);
+            }
+            else if (localserver)
+            {
+                servers = WMICollection("LocalServer32", includeSystem);
             }
             else
             {
@@ -43,11 +84,19 @@ namespace COMHunter
             foreach (COMServer server in servers)
             {
                 Console.WriteLine("{0} {1} ({2})", server.CLSID, server.ServerPath, server.Type);
+                Type t = Type.GetTypeFromCLSID(new Guid(server.CLSID));
+                MethodInfo[] methods = t.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public);
+                foreach (MethodInfo m in methods) {
+                        if(exclusionSet.Contains(m.Name)) {
+                            continue;
+                        }
+                    Console.WriteLine("\t- " + m.Name);
+                }
             }
             return;
         }
 
-        static List<COMServer> WMICollection(string type)
+        static List<COMServer> WMICollection(string type, bool includeSystem)
         {
             List<COMServer> comServers = new List<COMServer>();
             try
@@ -57,13 +106,16 @@ namespace COMHunter
                 {
                     // Collect InProcServer32 values
                     string svrObj = Convert.ToString(queryObj[type]);
-                    string svr = Environment.ExpandEnvironmentVariables(svrObj).Trim('"');
+                    string svr = TrimEnd(Environment.ExpandEnvironmentVariables(svrObj), "\"");
 
                     if (!string.IsNullOrEmpty(svr)
-                        && svr.ToLower().StartsWith(@"c:\") // Filter out things like combase.dll and ole32.dll
-                        && !svr.ToLower().Contains(@"c:\windows\") // Ignore OS components
+                        && svr.ToLower().StartsWith(@"c:\")
                         && File.Exists(svr)) // Make sure the file exists
                     {
+                        //Ignore OS components, if flag isn't set
+                        if(!includeSystem && svr.ToLower().Contains(@"c:\windows\")) {
+                            continue;
+                        }
                         comServers.Add(new COMServer
                         {
                             CLSID = queryObj["ComponentId"].ToString(),
