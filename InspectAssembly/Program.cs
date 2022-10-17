@@ -24,6 +24,7 @@ namespace InspectAssembly
         private const string XML_SERIALIZER_DESERIALIZE = "System.Xml.Serialization.XmlSerializer::Deserialize";
         private const string REGISTER_CHANNEL = "System.Runtime.Remoting.Channels.ChannelServices::RegisterChannel";
         private const string WCF_SERVER_STRING = "System.ServiceModel.ServiceHost::AddServiceEndpoint";
+        private const string WCF_SERVER_ALT_STRING = "System.ServiceModel.Channels.CommunicationObject::Open";
         private const string WCF_CLIENT_STRING = "System.ServiceModel.ChannelFactory::CreateChannel";
 
         private static string[] wcfServerGadgetNames = { WCF_SERVER_STRING };
@@ -530,6 +531,10 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                                 break;
                             case string x when x.Contains(WCF_SERVER_STRING):
                                 gadgetName = WCF_SERVER_STRING;
+                                isWCFServer = true;
+                                break;
+                            case string x when x.Contains(WCF_SERVER_ALT_STRING):
+                                gadgetName = WCF_SERVER_ALT_STRING;
                                 isWCFServer = true;
                                 break;
                             case string x when x.Contains("System.ServiceModel.ChannelFactory") && x.Contains("CreateChannel"): // System.ServiceModel.ChannelFactory`1<ClassName.ClassName>::CreateChannel()
