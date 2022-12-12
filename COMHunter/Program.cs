@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Reflection;
 
 namespace COMHunter
 {
@@ -26,11 +28,11 @@ namespace COMHunter
                 servers = WMICollection("InprocServer32");
                 servers.AddRange(WMICollection("LocalServer32"));
             }
-            else if(args[0] == "-inproc")
+            else if(args[0].ToLower() == "-inproc")
             {
                 servers = WMICollection("InprocServer32");
             }
-            else if (args[0] == "-localserver")
+            else if (args[0].ToLower() == "-localserver")
             {
                 servers = WMICollection("LocalServer32");
             }
@@ -40,9 +42,33 @@ namespace COMHunter
                 return;
             }
 
+            string[] defaultMethods = new string[] { "Equals", "GetHashCode", "GetType", "ToString" };
+
             foreach (COMServer server in servers)
             {
                 Console.WriteLine("{0} {1} ({2})", server.CLSID, server.ServerPath, server.Type);
+
+                // If the COM server is a .NET assembly, get the path of the actual DLL
+                if (server.ServerPath.ToLower().Contains("mscoree.dll"))
+                {
+                    object assembly = Registry.GetValue(string.Format("HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\CLSID\\{0}\\InprocServer32\\1.0.0.0", server.CLSID), "CodeBase", null);
+
+                    if (assembly != null)
+                    {
+                        Console.WriteLine(string.Format(".NET Assembly: {0}", assembly));
+
+                        Type assembly_type = Type.GetTypeFromCLSID(Guid.Parse(server.CLSID));
+
+                        foreach (MethodInfo mInfo in assembly_type.GetMethods())
+                        {
+                            // Print any non-default methods defined in the DLL
+                            if (defaultMethods.Any(s => mInfo.Name.Contains(s)))
+                            {
+                                Console.WriteLine(string.Format("  Method: {0}", mInfo.Name));
+                            }
+                        }
+                    }
+                }
             }
             return;
         }
@@ -60,7 +86,8 @@ namespace COMHunter
                     string svr = Environment.ExpandEnvironmentVariables(svrObj).Trim('"');
 
                     if (!string.IsNullOrEmpty(svr)
-                        && svr.ToLower().StartsWith(@"c:\") // Filter out things like combase.dll and ole32.dll
+                        // Commented out so COMHunter can find "mscoree.dll" which is used by .NET assemblies
+                        //&& svr.ToLower().StartsWith(@"c:\") // Filter out things like combase.dll and ole32.dll
                         && !svr.ToLower().Contains(@"c:\windows\") // Ignore OS components
                         && File.Exists(svr)) // Make sure the file exists
                     {
