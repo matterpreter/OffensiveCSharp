@@ -32,31 +32,58 @@ namespace InspectAssembly
         static Dictionary<string, object> ArgParser(string[] args)
         {
             Dictionary<string, object> result = new Dictionary<string, object>();
-            
-            foreach(string arg in args)
+            result["recurse"] = false;
+            result["third-party"] = false;
+            result["verbosity"] = 0;
+
+            foreach (string arg in args)
             {
-                if (!arg.Contains("="))
+                if (arg.ToLower() == "-r" || arg.ToLower() == "--recurse")
                 {
-                    Console.WriteLine("Argument '{0}' is not of format 'key=val'. Skipping.", arg);
+                    result["recurse"] = true;
                     continue;
                 }
+                else if (arg.ToLower() == "-v" || arg.ToLower() == "--verbose")
+                {
+                    result["verbosity"] = 1;
+                    continue;
+                }
+                else if (arg.ToLower() == "-vv" || arg.ToLower() == "--very-verbose")
+                {
+                    result["verbosity"] = 2;
+                    continue;
+                }
+                else if (arg.ToLower() == "-t" || arg.ToLower() == "--third-party")
+                {
+                    result["third-party"] = true;
+                    continue;
+                }
+                else if (!arg.Contains("="))
+                {
+                    Console.Error.WriteLine("Argument '{0}' is not of format 'key=val'. Skipping.", arg);
+                    continue;
+                }
+
                 string[] parts = arg.Split(new char[] { '=' }, 2);
+
                 if (parts.Length != 2)
                 {
-                    Console.WriteLine("Argument '{0}' contained an empty value. Skipping.", arg);
+                    Console.Error.WriteLine("Argument '{0}' contained an empty value. Skipping.", arg);
                     continue;
                 }
+
                 result[parts[0].ToLower()] = parts[1];
             }
+
             if (!result.ContainsKey("path") && !result.ContainsKey("pid"))
-                throw new Exception("Not enough arguments given. Must be passed 'path' or 'pid' to parse.");
-            if (result.ContainsKey("path") && result.ContainsKey("pid"))
             {
-                throw new Exception("Must be passed path or pid as arguments, not both.");
+                throw new Exception("Not enough arguments given. Must provide 'path', 'pid', or both.");
             }
+
             if (result.ContainsKey("path"))
             {
                 string path = result["path"].ToString();
+
                 if ((path.StartsWith("'") && path.EndsWith("'")) ||
                     (path.StartsWith("\"") && path.EndsWith("\"")))
                 {
@@ -67,78 +94,150 @@ namespace InspectAssembly
                 result["path"] = result["path"].ToString().Replace("\"", ""); // Remove any quotes before parsing
 
                 if (!File.Exists((string)result["path"]) && !Directory.Exists((string)result["path"]) && !Directory.Exists((string)result["path"] + "\\"))
+                {
                     throw new Exception(String.Format("File or directory {0} does not exist.", result["path"]));
-            } else
+                }
+            }
+
+            if (result.ContainsKey("pid"))
             {
                 string pids = (string)result["pid"];
+
                 if (pids.Contains(","))
                 {
                     var pidInts = pids.Split(',');
                     List<int> pidList = new List<int>();
-                    foreach(var pid in pidInts)
+
+                    foreach (var pid in pidInts)
                     {
                         if (int.TryParse(pid, out int iRes))
                         {
                             pidList.Add(iRes);
                         }
                     }
+
                     result["pid"] = pidList.ToArray();
-                } else if (result["pid"].ToString().ToLower() != "all")
+                }
+                else if (result["pid"].ToString().ToLower() != "all")
                 {
                     if (int.TryParse(result["pid"].ToString(), out int iRes))
                     {
                         result["pid"] = iRes;
-                    } else
+                    }
+                    else
                     {
                         throw new Exception(string.Format("Given invalid pid: {0}. Argument 'pid' must be one of integer, integer list, or value 'all'.", result["pid"].ToString()));
                     }
                 }
             }
+
             return result;
         }
 
-        static AssemblyGadgetAnalysis InspectAssembly(string path)
+        static AssemblyGadgetAnalysis InspectAssembly(string path, bool thirdPartyOnly, int verbosity)
         {
-            string targetAssembly = path;
+            // Skip Microsoft assemblies when the 'third-party' flag is set
+            if (thirdPartyOnly && FileVersionInfo.GetVersionInfo(path).CompanyName == "Microsoft Corporation")
+            {
+                if (verbosity > 0)
+                {
+                    Console.Error.WriteLine("[*] Skipping Microsoft assembly: {0}", path);
+                }
+
+                throw new Exception("Microsoft Assembly");
+            }
+            else if (verbosity > 1)
+            {
+                Console.Error.WriteLine("[*] Checking: {0}", path);
+            }
 
             // Make sure that the target is actually an assembly before we get started
-            AssemblyName assemblyName = AssemblyName.GetAssemblyName(targetAssembly);
+            AssemblyName assemblyName = AssemblyName.GetAssemblyName(path);
 
-            return AnalyzeAssembly(targetAssembly);
+            return AnalyzeAssembly(path);
         }
 
         static string Usage()
         {
             return @"
-Example Usage:
-    InspectAssembly.exe path=""C:\Windows\System32\powershell.exe""
-    InspectAssembly.exe path=""C:\Windows\System32\""    
-    InspectAssembly.exe pid=12044
-    InspectAssembly.exe pid=12044,12300 outfile=proc_analysis.txt
-    InspectAssembly.exe pid=all
+Usage:
+    InspectAssembly.exe [-r|--recurse] [-v|--verbose] [-vv|--very-verbose] 
+                        [path=""<PATH>""] [pid=<PID | PID,... | all>] [outfile=""<PATH>""]
+
+Flags:
+    -r, --recurse           Recursively search the specified directory. 
+                            Only used when 'path=<DIRECTORY>'.
+    --third-party           Only show results for non-Microsoft assemblies.
+    -v, --verbose           Print the path of skipped assemblies; only used with '--third-party' flag
+    -vv, --very-verbose     Print the path of each assembly checked.
 
 Arguments:
     path    - A path to a .NET binary to analyze, or a directory containing .NET assemblies.
     pid     - An integer or comma-separated list of integers to analyze.
               If the keyword 'all' is passed, then all processes are analyzed.
     outfile - File to write results to.
+
+Examples:
+    InspectAssembly.exe path=""C:\Windows\System32\powershell.exe""
+    InspectAssembly.exe path=""C:\Windows\System32\""
+    InspectAssembly.exe -r path=""C:\Program Files\"" --third-party -v
+    InspectAssembly.exe pid=12044
+    InspectAssembly.exe pid=12044,12300 outfile=proc_analysis.txt
+    InspectAssembly.exe pid=all
 ";
+        }
+
+        // While you can specify SearchOptions.AllDirectories as an argument to Directory.GetFiles(), 
+        // Directory.GetFiles() will throw an exception and return prematurely if it cannot read
+        // a directory (e.g., Access Denied)
+        // Therefore, we must manully recurse through sub-directories and ignore errors
+        static IEnumerable<string> GetFiles(string path, bool recurse)
+        {
+            IEnumerable<string> files;
+            var exes = Directory.GetFiles(path, "*.exe"); // ~320
+            var dlls = Directory.GetFiles(path, "*.dll"); // ~2800
+            files = exes.Concat(dlls);
+
+            if (recurse)
+            {
+                foreach (string subDir in Directory.GetDirectories(path))
+                {
+                    try
+                    {
+                        files = files.Concat(GetFiles(subDir, recurse));
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        Console.Error.WriteLine("[*] Unable to check '{0}'; access denied", subDir);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine("[-] Error: {0}", ex.Message);
+                    }
+                }
+            }
+
+            return files;
         }
 
         static void Main(string[] args)
         {
-
             Dictionary<string, object> arguments;
             try
             {
                 arguments = ArgParser(args);
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
-                Console.WriteLine("[-] Error parsing arguments. {0}", ex.Message);
-                Console.WriteLine(Usage());
+                Console.Error.WriteLine("[-] Error parsing arguments. {0}", ex.Message);
+                Console.Error.WriteLine(Usage());
                 return;
             }
+
+            bool thirdPartyOnly = (bool)arguments["third-party"];
+            int verbosity = (int)arguments["verbosity"];
             List<AssemblyGadgetAnalysis> results = new List<AssemblyGadgetAnalysis>();
+
             if (arguments.ContainsKey("path"))
             {
                 string path = arguments["path"].ToString();
@@ -146,51 +245,57 @@ Arguments:
                 {
                     try
                     {
-                        AssemblyName assemblyName = AssemblyName.GetAssemblyName(path);
-                        results.Add(InspectAssembly(path));
-                    } catch { }
-                } else
+                        results.Add(InspectAssembly(path, thirdPartyOnly, verbosity));
+                    }
+                    catch { }
+                }
+                else
                 {
-                    IEnumerable<string> files;
-                    var exes = Directory.GetFiles(path, "*.exe"); // ~320
-                    var dlls = Directory.GetFiles(path, "*.dll"); // ~2800
-                    files = exes.Concat(dlls);
+                    IEnumerable<string> files = GetFiles(path, (bool)arguments["recurse"]);
+
                     foreach (var f in files)
                     {
                         try
                         {
-                            AssemblyName assemblyName = AssemblyName.GetAssemblyName(f);
-                            results.Add(InspectAssembly(f));
-                        } catch { continue; }
+                            results.Add(InspectAssembly(f, thirdPartyOnly, verbosity));
+                        }
+                        catch { continue; }
                     }
                 }
-            } else
+            }
+
+            if (arguments.ContainsKey("pid"))
             {
                 List<Process> procs = new List<Process>();
                 object pidArg = arguments["pid"];
+
                 if (pidArg is int)
                 {
                     try
                     {
                         procs.Add(Process.GetProcessById((int)pidArg));
-                    } catch (Exception ex)
+                    }
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("[-] Error: {0}", ex.Message);
+                        Console.Error.WriteLine("[-] Error: {0}", ex.Message);
                         return;
                     }
-                } else if (pidArg is int[])
+                }
+                else if (pidArg is int[])
                 {
-                    foreach(int id in (int[])pidArg)
+                    foreach (int id in (int[])pidArg)
                     {
                         try
                         {
                             procs.Add(Process.GetProcessById((int)id));
-                        } catch (Exception)
+                        }
+                        catch (Exception)
                         {
                             continue;
                         }
                     }
-                } else
+                }
+                else
                 {
                     // all case
                     foreach (var proc in Process.GetProcesses())
@@ -203,60 +308,70 @@ Arguments:
                         { continue; }
                     }
                 }
+
                 if (procs.Count == 0)
                 {
-                    Console.WriteLine("[-] Failed to acquire any processes given pid argument: {0}", pidArg);
+                    Console.Error.WriteLine("[-] Failed to acquire any processes given pid argument: {0}", pidArg);
                     return;
                 }
-                foreach(var proc in procs)
+
+                foreach (var proc in procs)
                 {
                     try
                     {
                         string pathName = proc.MainModule.FileName;
-                        AssemblyName assemblyName = AssemblyName.GetAssemblyName(pathName);
-                        results.Add(InspectAssembly(pathName));
-                    } catch (Exception)
+
+                        results.Add(InspectAssembly(pathName, thirdPartyOnly, verbosity));
+                    }
+                    catch (Exception)
                     { continue; }
                 }
             }
+
             string resultStr = "";
             if (results.Count > 0)
             {
-                foreach(var res in results)
+                foreach (var res in results)
                 {
                     string temp = res.ToString();
+
                     if (!string.IsNullOrEmpty(temp))
-                        resultStr += res.ToString() +"\n";
+                    {
+                        resultStr += res.ToString() + "\n";
+                    }
                 }
                 if (!string.IsNullOrEmpty(resultStr))
                 {
                     Console.WriteLine(resultStr);
+
                     if (arguments.ContainsKey("outfile"))
                     {
                         if (File.Exists((string)arguments["outfile"]))
                         {
-                            Console.WriteLine("[-] File {0} already exists - will not write data to outfile.", arguments["outfile"]);
+                            Console.Error.WriteLine("[-] File {0} already exists - will not write data to outfile.", arguments["outfile"]);
                         }
                         else
                         {
                             try
                             {
                                 File.WriteAllText(arguments["outfile"].ToString(), resultStr);
-                                Console.WriteLine("[+] Wrote results to {0}", arguments["outfile"]);
+                                Console.Error.WriteLine("[+] Wrote results to {0}", arguments["outfile"]);
                             }
                             catch (Exception)
                             {
-                                Console.WriteLine("[-] Failed to write output file: {0}", arguments["outfile"]);
+                                Console.Error.WriteLine("[-] Failed to write output file: {0}", arguments["outfile"]);
                             }
                         }
                     }
-                } else
-                {
-                    Console.WriteLine("[-] No results to display.");
                 }
-            } else
+                else
+                {
+                    Console.Error.WriteLine("[-] No results to display.");
+                }
+            }
+            else
             {
-                Console.WriteLine("[-] No results to display.");
+                Console.Error.WriteLine("[-] No results to display.");
             }
         }
 
@@ -283,16 +398,27 @@ Arguments:
                 List<string> dnRemotingChannels = new List<string>();
                 List<GadgetItem> serverGadgets = new List<GadgetItem>();
                 List<GadgetItem> clientGadgets = new List<GadgetItem>();
-                foreach(var gadget in items)
+
+                foreach (var gadget in items)
                 {
                     if (gadget.IsWCFClient && !tempClient.ContainsKey(gadget.GadgetName))
+                    {
                         tempClient[gadget.GadgetName] = new List<MethodInfo>();
+                    }
                     else if (gadget.IsWCFServer && !tempServer.ContainsKey(gadget.GadgetName))
+                    {
                         tempServer[gadget.GadgetName] = new List<MethodInfo>();
+                    }
+
                     if (gadget.IsDotNetRemoting && !tempClient.ContainsKey(gadget.GadgetName))
+                    {
                         tempRemoting[gadget.GadgetName] = new List<MethodInfo>();
+                    }
                     else if (!temp.ContainsKey(gadget.GadgetName))
+                    {
                         temp[gadget.GadgetName] = new List<MethodInfo>();
+                    }
+
                     if (gadget.IsWCFClient)
                     {
                         tempClient[gadget.GadgetName].Add(new MethodInfo()
@@ -300,21 +426,24 @@ Arguments:
                             MethodName = gadget.MethodAppearance,
                             FilterLevel = gadget.FilterLevel
                         });
-                    } else if (gadget.IsWCFServer)
+                    }
+                    else if (gadget.IsWCFServer)
                     {
                         tempServer[gadget.GadgetName].Add(new MethodInfo()
                         {
                             MethodName = gadget.MethodAppearance,
                             FilterLevel = gadget.FilterLevel
                         });
-                    } else if (gadget.IsDotNetRemoting)
+                    }
+                    else if (gadget.IsDotNetRemoting)
                     {
                         tempRemoting[gadget.GadgetName].Add(new MethodInfo()
                         {
                             MethodName = gadget.MethodAppearance,
                             FilterLevel = gadget.FilterLevel
                         });
-                    } else
+                    }
+                    else
                     {
                         temp[gadget.GadgetName].Add(new MethodInfo()
                         {
@@ -323,32 +452,47 @@ Arguments:
                         });
                     }
                     if (gadget.IsDotNetRemoting)
+                    {
                         dnRemotingChannels.Add(gadget.RemotingChannel);
+                    }
                 }
+
                 RemotingChannels = dnRemotingChannels.ToArray();
                 SerializationGadgetCalls = new Dictionary<string, MethodInfo[]>();
                 ClientCalls = new Dictionary<string, MethodInfo[]>();
                 WcfServerCalls = new Dictionary<string, MethodInfo[]>();
                 RemotingCalls = new Dictionary<string, MethodInfo[]>();
+
                 foreach (var key in temp.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
+                    {
                         SerializationGadgetCalls[key] = temp[key].ToArray();
+                    }
                 }
+
                 foreach (var key in tempClient.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
+                    {
                         ClientCalls[key] = tempClient[key].ToArray();
+                    }
                 }
+
                 foreach (var key in tempServer.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
+                    {
                         WcfServerCalls[key] = tempServer[key].ToArray();
+                    }
                 }
+
                 foreach (var key in tempRemoting.Keys)
                 {
                     if (!string.IsNullOrEmpty(key))
+                    {
                         RemotingCalls[key] = tempRemoting[key].ToArray();
+                    }
                 }
             }
 
@@ -359,22 +503,29 @@ Arguments:
                 {
                     string[] gadgetParts = key.Replace("::", "|").Split('|');
                     string gadget;
+
                     if (gadgetParts.Length != 2)
+                    {
                         gadget = key;
+                    }
                     else
                     {
                         string[] typeParts = gadgetParts[0].Split('.');
                         gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
                     }
+
                     fmtStr += String.Format($"{"",4}{gadget} is called in the following methods:\n");
 
                     var methods = tmp[key].Distinct();
+
                     foreach (var method in methods)
                     {
                         fmtStr += String.Format($"{"",6}{method}\n");
                     }
+
                     fmtStr += "\n";
                 }
+
                 return fmtStr;
             }
 
@@ -397,7 +548,9 @@ Arguments:
                     if (RemotingChannels.Length > 0)
                     {
                         foreach (var chan in RemotingChannels)
+                        {
                             fmtStr += string.Format("      {0}\n", chan);
+                        }
                     }
                 }
                 if (ClientCalls.Keys.Count > 0)
@@ -405,18 +558,33 @@ Arguments:
                     fmtStr += "  WCFClient Gadgets:\n";
                     fmtStr += FormatGadgets(ClientCalls);
                 }
+
                 if (WcfServerCalls.Keys.Count > 0)
                 {
                     fmtStr += "  WCFServer Gadgets:\n";
                     fmtStr += FormatGadgets(WcfServerCalls);
                 }
+
                 if (SerializationGadgetCalls.Keys.Count > 0)
                 {
                     fmtStr += "  Serialization Gadgets:\n";
                     fmtStr += FormatGadgets(SerializationGadgetCalls);
                 }
+
                 if (fmtStr != "")
-                    fmtStr = String.Format("Assembly Name: {0}\n", AssemblyName) + fmtStr;
+                {
+                    // Print additional info about the assembly to aid with triaging
+                    FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(AssemblyName);
+
+                    string infoStr = String.Format(@"
+  ProductName     : {0}
+  ProductVersion  : {1}
+  FileVersion     : {2}
+  CompanyName     : {3}
+  LegalCopyright  : {4}", fileInfo.ProductName, fileInfo.ProductVersion, fileInfo.FileVersion, fileInfo.CompanyName, fileInfo.LegalCopyright);
+
+                    fmtStr = String.Format("Assembly Name: {0}{1}\n\n", AssemblyName, infoStr) + fmtStr;
+                }
                 return fmtStr;
             }
         }
@@ -447,13 +615,17 @@ Arguments:
                 //Console.WriteLine("[+] Assembly registers a .NET Remoting channel ({0}) in {1}.{2}", dnrChannel[5], method.t.Name, method.m.Name);
                 string[] gadgetParts = GadgetName.Replace("::", "|").Split('|');
                 string gadget;
+
                 if (gadgetParts.Length != 2)
+                {
                     gadget = GadgetName;
+                }
                 else
                 {
                     string[] typeParts = gadgetParts[0].Split('.');
                     gadget = String.Format("{0}::{1}()", typeParts[typeParts.Length - 1], gadgetParts[1]);
                 }
+
                 string fmtMessage = String.Format(@"
 IsDotNetRemoting     : {0}
     RemotingChannel  : {1}
@@ -461,8 +633,12 @@ IsWCFServer          : {2}
 IsWCFClient          : {3}
 GadgetName           : {4}
 MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsWCFClient, gadget, MethodAppearance);
+
                 if (!string.IsNullOrEmpty(FilterLevel))
+                {
                     fmtMessage += string.Format("\n\tFilterLevel      : {0}", FilterLevel);
+                }
+
                 return fmtMessage;
             }
         }
@@ -494,6 +670,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                     string remotingChannel = "";
                     bool isWCFServer = false;
                     bool isWCFClient = false;
+
                     // Deserialization checks
                     if (instruction.OpCode.ToString() == "callvirt")
                     {
@@ -549,15 +726,17 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                                 }
                                 break;
                         }
-
-                    } else if (instruction.OpCode.ToString().StartsWith("ldc.i4"))
+                    }
+                    else if (instruction.OpCode.ToString().StartsWith("ldc.i4"))
                     {
                         typeFilterLevel = instruction.OpCode.ToString();
-                    } else if (instruction.OpCode.ToString() == "newobj" && instruction.Operand.ToString().Contains("System.Runtime.Remoting.Channels."))
+                    }
+                    else if (instruction.OpCode.ToString() == "newobj" && instruction.Operand.ToString().Contains("System.Runtime.Remoting.Channels."))
                     {
                         // .NET Remoting Checks
                         dnrChannel = instruction.Operand.ToString().Split('.');
-                    } else if (instruction.OpCode.ToString() == "call")
+                    }
+                    else if (instruction.OpCode.ToString() == "call")
                     {
                         switch (instruction.Operand.ToString())
                         {
@@ -568,7 +747,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                                 break;
                         }
                     }
-                    
+
                     if (!string.IsNullOrEmpty(gadgetName) || isWCFClient || isWCFServer || isRemoting)
                     {
                         listGadgets.Add(new GadgetItem()
@@ -579,7 +758,7 @@ MethodAppearance     : {5}", IsDotNetRemoting, RemotingChannel, IsWCFServer, IsW
                             IsWCFClient = isWCFClient,
                             IsWCFServer = isWCFServer,
                             MethodAppearance = String.Format("{0}.{1}", method.t.Name, method.m.Name),
-                            FilterLevel = gadgetName.Contains(BF_DESERIALIZE) ?  filterLevel : null
+                            FilterLevel = gadgetName.Contains(BF_DESERIALIZE) ? filterLevel : null
                         });
                     }
                 }
